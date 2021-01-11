@@ -92,6 +92,25 @@ export class Paybox implements Document {
     }
   }
 
+  addReturnVars(newReturnVars: { [key: string]: string }) {
+    let vars = ''
+    if (typeof newReturnVars == 'object') {
+      if (this.request && this.request.PBX_RETOUR) {
+        for (const key of Object.keys(newReturnVars)) {
+          vars += `${newReturnVars[key]}:${key};`
+        }
+        this.request.PBX_RETOUR += vars
+      }
+    }
+  }
+  addFormFields(formFields: { [key: string]: string }) {
+    if (typeof formFields == 'object') {
+      for (const key of Object.keys(formFields)) {
+        this.request[key] = formFields[key]
+      }
+    }
+  }
+
   private archivage(): string {
     return Date.now().toString().substr(-12)
   }
@@ -126,7 +145,7 @@ export class Paybox implements Document {
     if (this.request.PBX_HMAC) {
       const elements = this.getFormElements()
       const hmac = Buffer.from(this.request.PBX_HMAC, 'hex')
-      const chain = elements.filter(e => e.name !== 'PBX_HMAC').map((e) => `${e.name}=${e.value}`).join('&')
+      const chain = elements.filter((e) => e.name !== 'PBX_HMAC').map((e) => `${e.name}=${e.value}`).join('&')
 
       this.request.PBX_HMAC = crypto.createHmac('sha512', hmac).update(chain).digest('hex').toUpperCase()
     }
