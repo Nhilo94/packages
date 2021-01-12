@@ -110,7 +110,7 @@ export class Paybox implements Document {
   addFormFields(formFields: { [key: string]: string }, hmacKey: string) {
     if (typeof formFields == 'object') {
       for (const key of Object.keys(formFields)) {
-        this.request[key] = formFields[key]
+        (this.request as any)[key] = formFields[key]
       }
     }
     this.request.PBX_HMAC = hmacKey
