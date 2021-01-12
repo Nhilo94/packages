@@ -92,23 +92,29 @@ export class Paybox implements Document {
     }
   }
 
-  addReturnVars(newReturnVars: { [key: string]: string }) {
-    let vars = ''
-    if (typeof newReturnVars == 'object') {
-      if (this.request && this.request.PBX_RETOUR) {
-        for (const key of Object.keys(newReturnVars)) {
-          vars += `${newReturnVars[key]}:${key};`
-        }
-        this.request.PBX_RETOUR += vars
-      }
+  addReturnVars(newReturnVars: { [key: string]: string }, hmacKey: string) {
+    let allVars = this.request.PBX_RETOUR.split(';')
+    let signatureVars = allVars.slice(-2)
+    let othersVars = allVars.slice(0, allVars.length - 2)
+
+    for (var _i = 0, _a = Object.keys(newReturnVars); _i < _a.length; _i++) {
+      var key = _a[_i]
+      othersVars.push(newReturnVars[key] + ':' + key)
     }
+    allVars = othersVars.concat(signatureVars)
+
+    this.request.PBX_RETOUR = allVars.join(';')
+    this.request.PBX_HMAC = hmacKey
+    this.computeHMAC()
   }
-  addFormFields(formFields: { [key: string]: string }) {
+  addFormFields(formFields: { [key: string]: string }, hmacKey: string) {
     if (typeof formFields == 'object') {
       for (const key of Object.keys(formFields)) {
         this.request[key] = formFields[key]
       }
     }
+    this.request.PBX_HMAC = hmacKey
+    this.computeHMAC()
   }
 
   private archivage(): string {
@@ -145,7 +151,10 @@ export class Paybox implements Document {
     if (this.request.PBX_HMAC) {
       const elements = this.getFormElements()
       const hmac = Buffer.from(this.request.PBX_HMAC, 'hex')
-      const chain = elements.filter((e) => e.name !== 'PBX_HMAC').map((e) => `${e.name}=${e.value}`).join('&')
+      const chain = elements
+        .filter((e) => e.name !== 'PBX_HMAC')
+        .map((e) => `${e.name}=${e.value}`)
+        .join('&')
 
       this.request.PBX_HMAC = crypto.createHmac('sha512', hmac).update(chain).digest('hex').toUpperCase()
     }
